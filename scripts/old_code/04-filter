@@ -1,0 +1,26 @@
+#!/bin/bash
+# Source the .bashrc script to add conda to the path
+source ~/.bashrc
+
+# Activate conda virtual enviroment for MISO (it requires python 2.7)
+conda activate miso
+
+set -uex -o pipefail 
+
+#################################################
+## Configure
+#################################################
+
+WD=~/userData/alternative_splicing_siRbm3/processed/miso
+COM_DIR=$WD/comparison/CTRL_isoform_vs_siRbm1_isoform/bayes-factors
+
+MISO_SETTINGS=/home/ftucci/miniconda3/envs/miso/misopy/settings/miso_settings.txt
+MISO_INDEX=~/userData/resources/MISO/ensGene_mm10_index
+
+
+#################################################
+## Run
+################################################# 
+
+cd $WD
+filter_events --filter $COM_DIR/CTRL_isoform_vs_siRbm1_isoform.miso_bf --apply-both --num-inc 1 --num-exc 1 --num-sum-inc-exc 10 --delta-psi 0.20 --bayes-factor 10 --output-dir filtered/

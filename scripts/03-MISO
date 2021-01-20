@@ -1,0 +1,66 @@
+#!/bin/bash
+# Source the .bashrc script to add conda to the path
+source ~/.bashrc
+
+# Activate conda virtual enviroment for MISO (it requires python 2.7)
+conda activate miso
+
+set -uex -o pipefail 
+
+#################################################
+## Configure
+#################################################
+
+WD=~/userData/alternative_splicing_DSS
+FILE_DIR=$WD/processed/bam
+OUT_DIR=$WD/processed/miso
+
+MISO_SETTINGS=/home/ftucci/miniconda3/envs/miso/misopy/settings/miso_settings.txt
+INDICES_DIR=$WD/data/miso_indices
+
+
+#################################################
+## Run
+################################################# 
+
+mkdir -p $OUT_DIR
+
+cd $FILE_DIR
+
+# Run MISO isoform centric analysis on a sngle-ended samples (with insert length 75)
+
+## Compute Psi value
+#for i in *.bam
+#do
+#	miso --run $INDICES_DIR/mm10_isoform_index \
+#		$i \
+#		--output-dir $OUT_DIR/${i//.Aligned.sortedByCoord.out.bam/}_isoform \
+#		--read-len 75 \
+#		--settings-filename $MISO_SETTINGS
+#    # Generate an sql summarie easier to store (you can perform analysis on it in place of the original folder)
+#	# It will automaticallly generate a summay subfolders with all the summaries
+#    summarize_miso --summarize-samples  $OUT_DIR/${i//.Aligned.sortedByCoord.out.bam/}_isoform $OUT_DIR
+#done
+
+# Run MISO exon centric analysis on a sngle-ended samples (with insert length 75)
+
+## SE, A3SS, A5SS, MXE, RI
+event_type=(SE A3SS A5SS MXE RI)
+
+# For every sample evaluate every type of exonic events
+for i in *.bam
+do 
+    for j in ${event_type[@]}
+    do
+        miso --run $INDICES_DIR/mm10_exon_index_$j \
+            $i \
+            --output-dir $OUT_DIR/${i//.Aligned.sortedByCoord.out.bam/}_exon_$j \
+            --read-len 50 \
+            --settings-filename $MISO_SETTINGS
+
+        summarize_miso --summarize-samples  $OUT_DIR/${i//.Aligned.sortedByCoord.out.bam/}_exon_$j $OUT_DIR
+    done
+done
+
+
+

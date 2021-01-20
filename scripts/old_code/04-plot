@@ -1,0 +1,18 @@
+#!/bin/bash
+# Source the .bashrc script to add conda to the path
+source ~/.bashrc
+# Activate conda virtual enviroment for MISO (it requires python 2.7)
+conda activate miso
+set -uex -o pipefail
+
+OUT_DIR=$WD/output/sashimi_plot
+SASHIMI_SETTINGS=$WD/script/plot_settings/sashimi_plot_settings.txt
+MISO_INDEX=~/userData/resources/MISO/musmusculus_GFF_index
+
+mkdir -p $OUT_DIR
+
+
+WD=~/userData/alternative_splicing_siRbm3
+
+sashimi_plot --plot-event "chr17:45816186:45816265:-@chr17:45815912:45815950:-@chr17:45814875:45814965:-" \
+$MISO_INDEX $SASHIMI_SETTINGS --output-dir $OUT_DIR

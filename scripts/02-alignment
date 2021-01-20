@@ -1,0 +1,57 @@
+#!/bin/bash
+set -uex -o pipefail
+
+#################################################
+## Configure
+#################################################
+
+STAR=/mnt/data/ccbc_environment/software/general/STAR-2.7.6a/STAR
+GENOME_DIR=~/userData/resources/genomes/musmusculus/STAR/GRCm38
+
+WD=~/userData/alternative_splicing_DSS
+FILE_DIR=$WD/processed/trimmed_fastq
+OUT_DIR=$WD/processed/bam
+LOG_DIR=$WD/logs/star
+READ_COUNTS_DIR=$WD/output/read_counts
+ 
+#################################################
+## Run
+################################################# 
+
+mkdir -p $OUT_DIR
+cd $OUT_DIR
+
+acc_list=$(cat $WD/data/SRR_Acc_List.txt)
+
+# Aligment -------------------------------------------------------------------------
+
+# Align raw fastq because MISO does not support mixed length reads
+# This is not a problem because STAR performs by defaul a local
+# alignment discarding unmatched extremities
+for i in $acc_list
+do
+    $STAR --genomeDir $GENOME_DIR \
+    --readFilesIn $FILE_DIR/$i.trimmed.fastq.gz \
+    --readFilesCommand gunzip -c \
+    --quantMode GeneCounts \
+    --runThreadN 16 \
+    --outSAMstrandField intronMotif \
+    --outSAMattrIHstart 0 \
+    --outReadsUnmapped Fastx \
+    --outSAMtype BAM SortedByCoordinate \
+    --outFileNamePrefix $OUT_DIR/${i}.
+done
+
+# Index BAM files
+find . -name "*.Aligned.sortedByCoord.out.bam" | parallel -k --lb "samtools index" 
+
+
+# Move log files in the appropriate directory
+mkdir -p $LOG_DIR
+
+mv -f *Log* $LOG_DIR/
+
+# Move read counts files in the appropiate directory
+mkdir -p $READ_COUNTS_DIR
+
+mv -f *ReadsPerGene.out.tab $READ_COUNTS_DIR/

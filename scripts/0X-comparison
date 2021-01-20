@@ -1,0 +1,26 @@
+#!/bin/bash
+# Source the .bashrc script to add conda to the path
+source ~/.bashrc
+
+# Activate conda virtual enviroment for MISO (it requires python 2.7)
+conda activate miso
+
+set -uex -o pipefail 
+
+#################################################
+## Configure
+#################################################
+
+WD=~/userData/alternative_splicing_siRbm3
+FILE_DIR=$WD/processed/bam/pooled
+OUT_DIR=$WD/processed/miso
+
+MISO_SETTINGS=/home/ftucci/miniconda3/envs/miso/misopy/settings/miso_settings.txt
+
+## Detect differentially expressed isoforms between "control" and "knockdown"
+## This will compute Bayes factors and delta Psi values between the samples
+## and place the results in the directory SE/comparisons/control_vs_knockdown
+mkdir -p $OUT_DIR/comparison
+
+compare_miso --compare-samples $OUT_DIR/CTRL_isoform $OUT_DIR/siRbm1_isoform $OUT_DIR/comparison
+

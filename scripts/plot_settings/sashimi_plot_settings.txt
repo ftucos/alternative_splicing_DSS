@@ -1,0 +1,79 @@
+[data]
+
+# Original seettings at /home/ftucci/miniconda3/envs/miso/misopy/settings/sashimi_plot_settings.txt
+
+# directory where BAM files are
+bam_prefix = ./processed/bam/pooled/
+# directory where MISO output is
+miso_prefix = ./processed/miso/ 
+
+bam_files = [
+    "CTRL.bam",
+    "siRbp1.bam"]
+
+miso_files = [
+    "CTRL_isoform",
+    "siRbm1_isoform"]
+
+[plotting]
+# Dimensions of figure to be plotted (in inches)
+fig_width = 7
+fig_height = 5 
+# Factor to scale down introns and exons by
+intron_scale = 30
+exon_scale = 4
+# Whether to use a log scale or not when plotting
+logged = False 
+font_size = 6
+
+bar_posteriors = False
+
+# Max y-axis
+ymax = 150
+
+# Axis tick marks
+nyticks = 3
+nxticks = 4
+
+# Whether to show axis labels
+show_ylabel = True
+show_xlabel = True
+
+# Whether to plot posterior distributions inferred by MISO
+show_posteriors = True 
+
+# Whether to plot the number of reads in each junction
+number_junctions = True
+
+resolution = .5
+posterior_bins = 40
+gene_posterior_ratio = 5
+
+# List of colors for read denisites of each sample
+colors = [
+    "#CC0011",
+    "#FF8800"]
+
+# Number of mapped reads in each sample (Unique + Multipammers)
+# (Used to normalize the read density for RPKM calculation)
+coverages = [
+    81651481,
+    80295040]
+
+# Bar color for Bayes factor distribution
+# plots (--plot-bf-dist)
+# Paint them blue
+bar_color = "b"
+
+# Bayes factors thresholds to use for --plot-bf-dist
+bf_thresholds = [0, 1, 2, 5, 10, 20]
+
+##
+## Names of colors for plotting
+##
+# "b" for blue
+# "k" for black
+# "r" for red
+# "g" for green
+#
+# Hex colors are accepted too.

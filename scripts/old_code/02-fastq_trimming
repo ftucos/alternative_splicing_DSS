@@ -1,0 +1,24 @@
+#!/bin/bash
+set -uex -o pipefail
+
+#################################################
+## Configure
+#################################################
+
+WD=~/userData/alternative_splicing_siRbm3
+FILE_DIR=$WD/data/bulkRNAseq
+OUT_DIR=$WD/processed/trimmed_fastq
+LOG_DIR=$WD/logs/fastp
+
+#################################################
+## Run
+################################################# 
+
+mkdir -p $OUT_DIR
+mkdir -p $LOG_DIR
+
+acc_list=$(cat $WD/data/SRR_Acc_List.txt)
+
+# Fastqp applies also a mild quality filter: Q>15 --> max 40% of Q<15
+parallel -k --lb "fastp -i $FILE_DIR/{}.fastq.gz  -o $OUT_DIR/{}.trimmed.fastq.gz \
+--thread 16 --json $LOG_DIR/{}.fastp.json --html $LOG_DIR/{}.fastp.html" ::: $acc_list

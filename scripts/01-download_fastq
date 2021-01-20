@@ -1,0 +1,54 @@
+#!/bin/bash
+set -uex -o pipefail
+
+####################################################################
+#
+# NOTE:
+# 
+# This script will download the fastq files from SRA. 
+# By default prefetch will download them in the ~/ncbi/public cache folder.
+# Before running the script change the default download directory with
+# vdb-config -i otherwise you will saturate the space in your home folder.
+# After you are done you should be manually cleaning the SRA cache in the ncbi folder
+#
+##########################################################################
+
+#################################################
+## Configure
+#################################################
+
+WD=~/userData/alternative_splicing_DSS
+DOWNLOAD_DIR=$WD/data/bulkRNAseq
+TMP_DIR=$WD/tmp
+OUT_DIR=$WD/processed/trimmed_fastq
+SRA_CACHE_DIR=/mnt/data/ccbc_environment/users/ftucci/ncbi/public/sra
+
+#################################################
+## Run
+################################################# 
+
+mkdir -p $DOWNLOAD_DIR
+mkdir -p $TMP_DIR
+mkdir -p $OUT_DIR
+
+cd $DOWNLOAD_DIR
+
+acc_list=$(cat $WD/data/SRR_Acc_List.txt)
+
+# Download the SRA files in the chache folder
+parallel -k --lb prefetch {} ::: $acc_list
+
+# Parse the SRA files to generate zipped fastq files (single ended)
+for i in $acc_list
+do
+   fastq-dump $i -O $DOWNLOAD_DIR/ --split-files --gzip
+   fasterq-dump $i -O $DOWNLOAD_DIR/ -t $TMP_DIR -e 60
+   gzip *.fastq
+done
+
+# Trim all the reads to 50 bp ----------------------------
+
+parallel -k --lb cutadapt --cores 20 --length 50 -o $OUT_DIR/{}.trimmed.fastq.gz {}.fastq.gz  ::: $acc_list
+
+rm -rf $DOWNLOAD_DIR
+rm -rf $SRA_CACHE_DIR

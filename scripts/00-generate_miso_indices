@@ -1,0 +1,41 @@
+#!/bin/bash
+# Source the .bashrc script to add conda to the path
+source ~/.bashrc
+
+# Activate conda virtual enviroment for MISO (it requires python 2.7)
+conda activate miso
+
+set -uex -o pipefail 
+
+#################################################
+## Configure
+#################################################
+
+WD=~/userData/alternative_splicing_DSS
+INDICES_DIR=$WD/data/miso_indices
+
+#################################################
+## Run
+#################################################
+
+mkdir -p $INDICES_DIR
+cd $INDICES_DIR
+
+# Generate index for ISOFORM CENTRIC analysis for mm10 genome
+
+wget http://hollywood.mit.edu/burgelab/miso/annotations/ucsc_tables/mm10/ensGene.gff3
+
+index_gff --index ensGene.gff3 mm10_isoform_index
+
+# Generate index for EXON CENTRIC analysos for mm10 genome
+
+wget http://hollywood.mit.edu/burgelab/miso/annotations/ver2/miso_annotations_mm10_v2.zip
+
+unzip miso_annotations_mm10_v2.zip
+
+event_type=(SE A3SS A5SS MXE RI)
+
+for i in ${event_type[@]}
+do
+    index_gff --index mm10/${i}.mm10.gff3 mm10_exon_index_${i}
+done
