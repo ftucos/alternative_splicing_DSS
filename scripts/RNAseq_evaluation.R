@@ -39,6 +39,7 @@ df.1 <- df %>%
 df.2 <- df.1 %>%
   # Remove outlier sample
 #  filter(sample != "SRR7529788") %>%
+  filter(lowly_abundant == FALSE) %>%
   keep_variable(top = 1000, log_transform = TRUE)
 
 # automatically computes SD
