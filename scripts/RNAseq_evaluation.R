@@ -92,3 +92,13 @@ ggplot(df.PCA, aes(x=PC1, y=PC2, group=sample, color = agent)) +
   geom_text_repel(aes(label = sample), size = 3, point.padding = unit(5, "cm"), show.legend = F) +
   ggtitle("PCA: no lowly expressed genes")+
   theme_bw()
+
+# SiRbm3 expression ------------------
+df.symbol %>% 
+  filter(external_gene_name == "Rbm3") %>%
+  ggplot(aes(x=sample, y=count_scaled, fill=agent)) +
+  geom_col() +
+  theme_bw() +
+  ggtitle("Rbm3 expression") + 
+  ylab("counts_scaled") + 
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
