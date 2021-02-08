@@ -4,7 +4,6 @@
 #================================
 
 library(tidyverse)
-library(patchwork)
 setwd("/Volumes/TucosHDD/Bioinformatics/workspace/alternative_splicing_DSS")
 
 # Functions ------------------------------------------------------------
@@ -40,8 +39,16 @@ DSS_metadata <- read_csv("data/SraRunTable.txt")
 
 DSS_AS <- map(DSS_files, ~import_AS(.x, DSS_path)) %>%
   do.call(rbind, .) %>%
+  filter(event_type != "isoform") %>%
+  mutate(miso_posterior_mean = as.numeric(miso_posterior_mean),
+         ci_low = as.numeric(ci_low),
+         ci_high = as.numeric(ci_high)) %>%
+  # Add sample metadata
+  left_join(select(DSS_metadata, Run, Treatment=agent), by=c("sample" = "Run")) %>%
+  mutate(Run = sample,
+         sample = paste0(sample, "-", Treatment)) %>%
   # Add 0-counts_events
-  full_join(fill_in_missing_events(.))
+  full_join(fill_in_missing_events(.)) 
 
 # Import Rbm3 analysis files
 Rbm3_path <- "/Volumes/TucosHDD/Bioinformatics/workspace/alternative_splicing_siRbm3/processed/miso/summary/"
@@ -50,6 +57,13 @@ Rbm3_metadata <- read_csv("/Volumes/TucosHDD/Bioinformatics/workspace/alternativ
 
 Rbm3_AS <- map(Rbm3_files, ~import_AS(.x, Rbm3_path)) %>%
   do.call(rbind, .) %>%
+  filter(event_type != "isoform") %>%
+  mutate(miso_posterior_mean = as.numeric(miso_posterior_mean),
+         ci_low = as.numeric(ci_low),
+         ci_high = as.numeric(ci_high)) %>%
+  left_join(select(Rbm3_metadata, Run, Treatment), by=c("sample" = "Run")) %>%
+  mutate(Run = sample,
+         sample = paste0(Run, "-", str_extract(Treatment, "(mock|siRbm3)"))) %>%
   full_join(fill_in_missing_events(.))
 
 # X + Y >= N, Y >= 1
@@ -85,6 +99,7 @@ AS.1 %>%
   ) +
   facet_wrap(~experiment,scales = "free_x") +
   labs(title = "Alternative Splicing events",
+       subtitle = "",
        caption = "DSS: read length = 50 bp, read depth ~ 32 M\nsiRbm3: read length = 75 bp, read depth ~ 40 M\nThreshold: noAS_reads + AS_reads >= 20")
 
 AS.2 <- AS.1 %>%
@@ -108,8 +123,92 @@ AS.2 %>%
 
                     
 # Differential events analysis --------------------------------
+DE_DSS <- AS.2 %>%
+  filter(experiment == "DSS",
+         Status == "Non-missing") %>%
+  group_by(event_name, event_type, Treatment) %>%
+  summarize(mean_PSI = mean(miso_posterior_mean),
+            min_CI_low = min(ci_low),
+            max_CI_high = max(ci_high)) %>%
+  ungroup()
+  
+DE_DSS.1 <- full_join(
+  DE_DSS %>%
+    filter(Treatment == "Water") %>%
+    select(-Treatment) %>%
+    rename(mean_PSI.water = mean_PSI,
+           min_CI_low.water = min_CI_low,
+           max_CI_high.water = max_CI_high),
+  DE_DSS %>%
+    filter(Treatment == "DSS") %>%
+    select(-Treatment) %>%
+    rename(mean_PSI.dss = mean_PSI,
+           min_CI_low.dss = min_CI_low,
+           max_CI_high.dss = max_CI_high),
+) %>%
+  # Identify Differential Events
+  mutate(PSI_diff = mean_PSI.dss - mean_PSI.water,
+         direction = case_when(
+           PSI_diff >= 0.1 & min_CI_low.dss > max_CI_high.water ~ "UP",
+           PSI_diff <- 0.1  & max_CI_high.dss < min_CI_low.water ~ "DOWN",
+           TRUE ~ "NON SIGNIFICANT")
+         )
 
-                    
+
+DE_Rbm3 <- AS.2 %>%
+  filter(experiment == "siRbm3",
+         Status == "Non-missing") %>%
+  group_by(event_name, event_type, Treatment) %>%
+  summarize(mean_PSI = mean(miso_posterior_mean),
+            min_CI_low = min(ci_low),
+            max_CI_high = max(ci_high)) %>%
+  ungroup()
+
+DE_Rbm3.1 <- full_join(
+  DE_Rbm3 %>%
+    filter(Treatment == "mock transfected at 37C") %>%
+    select(-Treatment) %>%
+    rename(mean_PSI.mock = mean_PSI,
+           min_CI_low.mock = min_CI_low,
+           max_CI_high.mock = max_CI_high),
+  DE_Rbm3 %>%
+    filter(Treatment == "siRbm3 transfected at 37C") %>%
+    select(-Treatment) %>%
+    rename(mean_PSI.si = mean_PSI,
+           min_CI_low.si = min_CI_low,
+           max_CI_high.si = max_CI_high),
+) %>%
+  # Identify Differential Events
+  mutate(PSI_diff = mean_PSI.si - mean_PSI.mock,
+         direction = case_when(
+           PSI_diff >= 0.1 & min_CI_low.si > max_CI_high.mock ~ "UP",
+           PSI_diff <= -0.1  & max_CI_high.si < min_CI_low.mock ~ "DOWN",
+           TRUE ~ "NON SIGNIFICANT")
+  )
 
 
+# Plot
+rbind(
+  DE_DSS.1 %>% select(event_name, event_type, PSI_diff, direction) %>% mutate(experiment = "DSS"),
+  DE_Rbm3.1 %>% select(event_name, event_type, PSI_diff, direction) %>% mutate(experiment = "siRbm3")) %>%
+  group_by(experiment,  event_type, direction) %>%
+  summarize(count = n()) %>%
+  rbind(data.frame(
+    experiment = c("DSS", "DSS"),
+    event_type = c(NA, NA),
+    direction = c("UP", "DOWN"),
+    count = c(0, 0)
+  )) %>%
+  filter(direction != "NON SIGNIFICANT") %>%
+  ggplot(aes(x=as.factor(experiment), y=count, fill = event_type)) +
+  geom_col(position="stack") +
+  theme_bw() +
+  facet_wrap(~direction) +
+  scale_fill_discrete(na.translate=FALSE, name = "AS event type") +
+  ggtitle("Significantly altered AS events") +
+  xlab("")
 
+# Find overlapping events
+a <- DE_Rbm3.1 %>%
+  group_by(event_name) %>%
+  summarize(count = n())
