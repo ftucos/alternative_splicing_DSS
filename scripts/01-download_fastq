@@ -41,7 +41,7 @@ parallel -k --lb prefetch {} ::: $acc_list
 # Parse the SRA files to generate zipped fastq files (single ended)
 for i in $acc_list
 do
-   fastq-dump $i -O $DOWNLOAD_DIR/ --split-files --gzip
+#   fastq-dump $i -O $DOWNLOAD_DIR/ --split-files --gzip
    fasterq-dump $i -O $DOWNLOAD_DIR/ -t $TMP_DIR -e 60
    gzip *.fastq
 done
